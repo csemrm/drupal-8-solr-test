@@ -1,0 +1,95 @@
+<?php
+
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\media_download_path\PageCache\CacheableBinaryFileResponse;
+use Drupal\media_download_path\Plugin\Field\FieldType\MediaDownloadPathItem;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+
+/**
+ * Implements hook_entity_base_field_info().
+ */
+function media_download_path_entity_base_field_info(EntityTypeInterface $entity_type) {
+  if ($entity_type->id() == 'media') {
+    $fields[MediaDownloadPathItem::FIELD_NAME] = BaseFieldDefinition::create('media_download_path')
+      ->setLabel(t('Download URL alias'))
+      ->setTranslatable(TRUE)
+      ->setDisplayOptions('form', [
+        'type' => 'media_download_path',
+        'weight' => 29,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setComputed(TRUE);
+
+    return $fields;
+  }
+}
+
+/**
+ * Implements hook_entity_translation_create().
+ *
+ * @see path_entity_translation_create()
+ */
+function media_download_path_entity_translation_create(ContentEntityInterface $translation) {
+  foreach ($translation->getFieldDefinitions() as $field_name => $field_definition) {
+    if ($field_definition->getType() === 'media_download_path' && $translation->get($field_name)->pid) {
+      // If there are values and a path ID, update the langcode and unset the
+      // path ID to save this as a new alias.
+      $translation->get($field_name)->langcode = $translation->language()->getId();
+      $translation->get($field_name)->pid = NULL;
+    }
+  }
+}
+
+/**
+ * Implements hook_media_download_response_alter().
+ */
+function media_download_path_media_download_response_alter(Response &$response, array $context) {
+  if (!isset($context['uri'], $context['headers'], $context['scheme'])) {
+    return;
+  }
+
+  $content_disposition = $response->headers->get('Content-Disposition');
+
+  $response = new CacheableBinaryFileResponse($context['uri'], Response::HTTP_OK, $context['headers'], $context['scheme'] !== 'private');
+
+  // Restore Content-Disposition header.
+  $response->headers->set('Content-Disposition', $content_disposition);
+
+  // Set max age for media download response.
+  $max_age = \Drupal::configFactory()->get('system.performance')->get('cache.page.max_age');
+  $response->setMaxAge($max_age);
+
+  // Add media's and file's cache information into response.
+  isset($context['media']) && $response->addCacheableDependency($context['media']);
+  isset($context['file']) && $response->addCacheableDependency($context['file']);
+
+  // If entity usage enabled, do something.
+  if (\Drupal::moduleHandler()->moduleExists('entity_usage')) {
+    /** @var \Drupal\entity_usage\EntityUsageInterface $entity_usage */
+    $entity_usage = \Drupal::service('entity_usage.usage');
+
+    // If entity usage enabled, we think the media should inline on the web page.
+    $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE);
+
+    // Add media source usages' cache information into the media response.
+    if (isset($context['media'])) {
+      $usages = $entity_usage->listSources($context['media'], FALSE);
+      foreach ($usages as $usage) {
+        $entity = \Drupal::entityTypeManager()->getStorage($usage['source_type'])->load($usage['source_id']);
+        $entity && $response->addCacheableDependency($entity);
+      }
+    }
+
+    // Add file source usages' cache information into the media response.
+    if (isset($context['file'])) {
+      $usages = $entity_usage->listSources($context['file'], FALSE);
+      foreach ($usages as $usage) {
+        $entity = \Drupal::entityTypeManager()->getStorage($usage['source_type'])->load($usage['source_id']);
+        $entity && $response->addCacheableDependency($entity);
+      }
+    }
+  }
+}

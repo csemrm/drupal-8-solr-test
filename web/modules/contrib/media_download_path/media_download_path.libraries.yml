@@ -1,0 +1,8 @@
+download_path.tabs:
+  version: VERSION
+  js:
+    js/download-path-tabs.js: {}
+  dependencies:
+  - core/jquery
+  - core/drupal
+  - core/drupal.form

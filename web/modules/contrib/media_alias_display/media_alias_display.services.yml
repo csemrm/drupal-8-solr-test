@@ -1,0 +1,5 @@
+services:
+  media_alias_display.route_subscriber:
+    class: 'Drupal\media_alias_display\Routing\RouteSubscriber'
+    tags:
+      - { name: 'event_subscriber' }

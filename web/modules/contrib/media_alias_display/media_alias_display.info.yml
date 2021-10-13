@@ -1,0 +1,13 @@
+name: Media Alias Display
+type: module
+description: Allows files to be displayed via media alias
+core: 8.x
+core_version_requirement: ^8 || ^9
+package: Media
+dependencies:
+  - drupal:media
+
+# Information added by Drupal.org packaging script on 2021-02-25
+version: '1.0.3'
+project: 'media_alias_display'
+datestamp: 1614262168

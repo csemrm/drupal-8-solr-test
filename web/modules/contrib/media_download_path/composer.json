@@ -1,0 +1,25 @@
+{
+    "name": "drupal/media_download_path",
+    "description": "This module provides to rename Media Entity Download links.",
+    "type": "drupal-module",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Kang Miao",
+            "email": "kang@ciandt.com"
+        }
+    ],
+    "require": {
+        "drupal/media_entity_download": "^2.1"
+    },
+    "extra": {
+        "patches": {
+            "drupal/core": {
+                "https://drupal.org/node/3227041": "https://www.drupal.org/files/issues/2021-08-06/3227041-2.patch"
+            },
+            "drupal/media_entity_download": {
+                "https://drupal.org/node/3176548": "https://www.drupal.org/files/issues/2021-08-06/3176548-5.patch"
+            }
+        }
+    }
+}

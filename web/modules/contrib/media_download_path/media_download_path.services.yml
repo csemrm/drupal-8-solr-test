@@ -1,0 +1,6 @@
+services:
+  media_download_path.twig_extension:
+    class: Drupal\media_download_path\MediaDownloadPathTwigExtension
+    arguments: ['@language_manager']
+    tags:
+      - { name: twig.extension }
